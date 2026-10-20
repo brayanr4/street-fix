@@ -144,8 +144,16 @@ export async function api<T>(url: string, body?: unknown, method = body ? "POST"
     headers: body ? { "Content-Type": "application/json" } : undefined,
     body: body ? JSON.stringify(body) : undefined,
   });
-  if (!res.ok) throw new Error(`Request failed (${res.status})`);
+  if (!res.ok) {
+    const detail = (await res.json().catch(() => null)) as { error?: string } | null;
+    throw new Error(detail?.error ?? `Request failed (${res.status})`);
+  }
   return res.json() as Promise<T>;
+}
+
+// Shows the server's message for rate limits, and a plain fallback for everything else.
+export function friendly(e: unknown, fallback: string) {
+  return e instanceof Error && e.message.startsWith("Too many") ? e.message : fallback;
 }
 
 export function daysBetween(from: Date, to: Date) {

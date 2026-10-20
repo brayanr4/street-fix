@@ -1,25 +1,23 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import { NewReport } from "@/components/NewReport";
 import { isDue, ReportDetail, StatusPill } from "@/components/ReportDetail";
-import { api, Button, Card, niceDate, Spinner } from "@/components/ui";
+import { Button, Card, niceDate, Spinner } from "@/components/ui";
 import { getAgency } from "@/lib/agencies";
+import { reportStore } from "@/lib/local";
 import { ISSUE_ICONS, type Report } from "@/lib/types";
 
 type View = { name: "home" } | { name: "new" } | { name: "report"; id: string };
 
 export default function Home() {
   const [view, setView] = useState<View>({ name: "home" });
-  const [reports, setReports] = useState<Report[] | null>(null);
-
-  useEffect(() => {
-    api<Report[]>("/api/reports").then(setReports, () => setReports([]));
-  }, []);
+  const reports = useSyncExternalStore(reportStore.subscribe, reportStore.get, reportStore.getServer);
+  const [saveFailed, setSaveFailed] = useState(false);
 
   useEffect(() => window.scrollTo({ top: 0 }), [view]);
 
-  const upsert = (r: Report) => setReports((all) => [r, ...(all ?? []).filter((x) => x.id !== r.id)]);
+  const upsert = (r: Report) => setSaveFailed(!reportStore.upsert(r));
 
   let body;
   if (view.name === "new") {
@@ -47,7 +45,13 @@ export default function Home() {
         </button>
         <span className="ml-auto rounded-full bg-slate-200 px-3 py-1 text-xs font-semibold text-slate-700">Adelaide</span>
       </header>
+      {saveFailed && (
+        <div role="alert" className="mb-4 rounded-xl bg-amber-50 p-4 text-amber-900">
+          Your browser didn&apos;t let us save this report (private browsing or full storage), so it will disappear when you close this tab.
+        </div>
+      )}
       {body}
+      <p className="mt-10 text-center text-xs text-slate-500">Your reports and photos are saved only on this device.</p>
     </main>
   );
 }

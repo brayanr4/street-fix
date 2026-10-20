@@ -30,7 +30,14 @@ Without an API key the app still works. You just type the description yourself, 
 - `src/lib/agencies.ts` holds the Adelaide routing rules and the escalation ladder.
 - `src/lib/ai.ts` handles the photo description and letter writing (Claude, with template fallbacks).
 - `src/lib/geo.ts` turns GPS into an address and council using OpenStreetMap's Nominatim.
-- Reports are saved to `data/reports.json`. That's fine for one person, but a real launch needs a database and user accounts.
+- Reports are saved in the browser (localStorage) of the phone that made them. Nobody else can see your photos or locations, and the server needs no database. The catch: clearing browser data or switching phones loses them. Accounts and a database come later.
+- `src/lib/rateLimit.ts` caps AI requests per visitor (30 per 10 minutes by default, set `STREET_FIX_RATE_LIMIT` to change) so a public site can't run up your API bill.
+
+## Deploy to Netlify
+
+1. In Netlify choose **Add new site → Import an existing project**, pick GitHub and select this repository. Netlify detects Next.js and uses the settings in `netlify.toml`.
+2. Under **Site configuration → Environment variables**, add `ANTHROPIC_API_KEY` (optional, but needed for AI photo descriptions and letters).
+3. Deploy. Every push to `main` redeploys automatically.
 
 ## Known gaps before launch
 

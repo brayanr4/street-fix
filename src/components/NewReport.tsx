@@ -2,11 +2,13 @@
 
 import { useEffect, useRef, useState } from "react";
 import { COUNCILS, routeIssue, type Agency } from "@/lib/agencies";
+import { createReport } from "@/lib/reports";
 import { ISSUE_ICONS, ISSUE_LABELS, ISSUE_TYPES, type Analysis, type IssueType, type Letter, type Report, type Severity } from "@/lib/types";
-import { api, Button, Card, SendLetter, Spinner, Steps } from "./ui";
+import { api, Button, friendly, Card, SendLetter, Spinner, Steps } from "./ui";
 
 type Draft = {
   photo: string | null;
+  thumb: string | null;
   lat: number | null;
   lng: number | null;
   note: string;
@@ -21,6 +23,7 @@ type Draft = {
 
 const EMPTY: Draft = {
   photo: null,
+  thumb: null,
   lat: null,
   lng: null,
   note: "",
@@ -76,7 +79,9 @@ export function NewReport({ onDone, onCancel }: { onDone: (r: Report) => void; o
     if (!file) return;
     setError(null);
     try {
-      set({ photo: await shrinkPhoto(file) });
+      // The full-size photo is only kept while reporting; a small copy is saved with the report.
+      const [photo, thumb] = await Promise.all([shrinkPhoto(file), shrinkPhoto(file, 640)]);
+      set({ photo, thumb });
     } catch {
       setError("That photo couldn't be opened. Try another one.");
     }
@@ -105,8 +110,8 @@ export function NewReport({ onDone, onCancel }: { onDone: (r: Report) => void; o
       });
       if (a && !a.isPublicIssue) setError("This photo doesn't look like a problem on public land. You can still continue if it is.");
       setStep(1);
-    } catch {
-      setError("Something went wrong. Check your connection and try again.");
+    } catch (e) {
+      setError(friendly(e, "Something went wrong. Check your connection and try again."));
     } finally {
       setBusy(null);
     }
@@ -116,29 +121,23 @@ export function NewReport({ onDone, onCancel }: { onDone: (r: Report) => void; o
     setBusy("Working out who's responsible and writing your report…");
     setError(null);
     try {
-      const res = await api<{ agency: Agency; letter: Letter }>("/api/draft", d);
+      const res = await api<{ agency: Agency; letter: Letter }>("/api/draft", { ...d, photo: null, thumb: null });
       setAgency(res.agency);
       setLetter(res.letter);
       setStep(2);
-    } catch {
-      setError("Something went wrong writing the report. Please try again.");
+    } catch (e) {
+      setError(friendly(e, "Something went wrong writing the report. Please try again."));
     } finally {
       setBusy(null);
     }
   }
 
-  async function markSent() {
+  function markSent() {
     if (!letter) return;
-    setBusy("Saving your report…");
-    try {
-      const { note: _note, ...fields } = d;
-      void _note;
-      const saved = await api<Report>("/api/reports", { ...fields, referenceNumber: "", letter });
-      onDone(saved);
-    } catch {
-      setError("Couldn't save. Please try again.");
-      setBusy(null);
-    }
+    const { note: _note, photo: _photo, thumb, ...fields } = d;
+    void _note;
+    void _photo;
+    onDone(createReport({ ...fields, photo: thumb, referenceNumber: "" }, letter));
   }
 
   const routed = routeIssue(d.issueType, d.councilId, d.onMainRoad);

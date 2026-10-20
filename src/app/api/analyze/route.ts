@@ -1,7 +1,11 @@
 import { aiEnabled, analyzePhoto } from "@/lib/ai";
 import { lookupPlace } from "@/lib/geo";
+import { rateLimited } from "@/lib/rateLimit";
 
 export async function POST(request: Request) {
+  const limited = rateLimited(request);
+  if (limited) return limited;
+
   const { image, lat, lng, note } = (await request.json()) as {
     image: string | null;
     lat: number | null;

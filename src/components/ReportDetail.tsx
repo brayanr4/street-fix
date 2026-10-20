@@ -2,8 +2,9 @@
 
 import { useState } from "react";
 import { ESCALATION_STEPS, getAgency } from "@/lib/agencies";
+import { applyAction, applyFollowUpSent, type ReportAction } from "@/lib/reports";
 import { ISSUE_ICONS, ISSUE_LABELS, type Letter, type Report } from "@/lib/types";
-import { api, Button, Card, daysBetween, niceDate, SendLetter, Spinner } from "./ui";
+import { api, Button, Card, friendly, daysBetween, niceDate, SendLetter, Spinner } from "./ui";
 
 export function isDue(r: Report) {
   return r.status !== "fixed" && new Date(r.nextCheckAt) <= new Date();
@@ -28,35 +29,26 @@ export function ReportDetail({ report, onChange, onBack }: { report: Report; onC
   const age = daysBetween(new Date(sentAt), new Date());
   const lastLevel = ESCALATION_STEPS.length - 1;
 
-  async function act(action: "fixed" | "acknowledged" | "not-fixed" | "reference") {
-    setError(null);
-    try {
-      onChange(await api<Report>(`/api/reports/${report.id}`, { action, referenceNumber: refInput }, "PATCH"));
-    } catch {
-      setError("Couldn't save that. Please try again.");
-    }
+  function act(action: ReportAction) {
+    onChange(applyAction(report, action, refInput));
   }
 
   async function startFollowUp() {
     setBusy("Writing your follow-up…");
     setError(null);
     try {
-      setFollowUp(await api(`/api/reports/${report.id}/followup`, { mode: "draft" }));
-    } catch {
-      setError("Couldn't write the follow-up. Please try again.");
+      setFollowUp(await api("/api/followup", { report: { ...report, photo: null } }));
+    } catch (e) {
+      setError(friendly(e, "Couldn't write the follow-up. Please try again."));
     } finally {
       setBusy(null);
     }
   }
 
-  async function followUpSent() {
+  function followUpSent() {
     if (!followUp) return;
-    try {
-      onChange(await api<Report>(`/api/reports/${report.id}/followup`, { mode: "sent", letter: followUp.letter }));
-      setFollowUp(null);
-    } catch {
-      setError("Couldn't save. Please try again.");
-    }
+    onChange(applyFollowUpSent(report, followUp.letter));
+    setFollowUp(null);
   }
 
   if (busy) return <Spinner label={busy} />;
