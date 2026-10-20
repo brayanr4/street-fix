@@ -1,36 +1,40 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Street Fix (Adelaide)
 
-## Getting Started
+Snap a problem on your street. Street Fix works out who is responsible, writes the report for you, and keeps following up until it's fixed.
 
-First, run the development server:
+## What it does
+
+1. **Photo:** take a photo. The app reads your location, and AI describes the problem.
+2. **Check:** confirm the problem type, address and council. Street Fix picks the agency:
+   - Streetlights go to **SA Power Networks**.
+   - Potholes, signs and drains on main roads go to the **Department for Infrastructure and Transport** (hazard line 1800 018 313).
+   - Everything else goes to **your council** (all 19 metro Adelaide councils are listed).
+3. **Send:** copy the ready-made message, open the agency's page and paste it in.
+4. **Track:** when a deadline passes, the report is flagged. If it isn't fixed, Street Fix writes the next letter up the ladder: a friendly reminder, then a formal complaint, then a letter to your councillor or MP, then a complaint to the ombudsman (Ombudsman SA, or the Energy and Water Ombudsman SA for SA Power Networks).
+
+## Run it
 
 ```bash
+npm install
+cp .env.example .env.local   # optional: add your Anthropic API key
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Then open http://localhost:3000. To try it on your phone, open `http://<your-computer's-IP>:3000` on the same Wi-Fi.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Without an API key the app still works. You just type the description yourself, and letters come from built-in templates.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## How it's built
 
-## Learn More
+- Next.js 16 (App Router) and Tailwind. Everything is in one page, designed for phones first.
+- `src/lib/agencies.ts` holds the Adelaide routing rules and the escalation ladder.
+- `src/lib/ai.ts` handles the photo description and letter writing (Claude, with template fallbacks).
+- `src/lib/geo.ts` turns GPS into an address and council using OpenStreetMap's Nominatim.
+- Reports are saved to `data/reports.json`. That's fine for one person, but a real launch needs a database and user accounts.
 
-To learn more about Next.js, take a look at the following resources:
+## Known gaps before launch
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- Sending is semi-automatic: the person copies the message into the agency's form. Most councils don't offer a public API, so direct filing would need one integration per council.
+- Check-in reminders only show inside the app. Push or email reminders are the next step.
+- Council websites in `agencies.ts` should be checked, and each one linked straight to its "report an issue" page.
+- The main-road question is answered by the person. A future version could look up the state road network automatically.

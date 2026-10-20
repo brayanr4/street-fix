@@ -1,0 +1,227 @@
+"use client";
+
+import { useState } from "react";
+import { ESCALATION_STEPS, getAgency } from "@/lib/agencies";
+import { ISSUE_ICONS, ISSUE_LABELS, type Letter, type Report } from "@/lib/types";
+import { api, Button, Card, daysBetween, niceDate, SendLetter, Spinner } from "./ui";
+
+export function isDue(r: Report) {
+  return r.status !== "fixed" && new Date(r.nextCheckAt) <= new Date();
+}
+
+export function StatusPill({ r }: { r: Report }) {
+  if (r.status === "fixed") return <span className="whitespace-nowrap rounded-full bg-emerald-100 px-3 py-1 text-sm font-semibold text-emerald-800">Fixed</span>;
+  if (isDue(r)) return <span className="whitespace-nowrap rounded-full bg-amber-100 px-3 py-1 text-sm font-semibold text-amber-900">Check in</span>;
+  if (r.status === "acknowledged") return <span className="whitespace-nowrap rounded-full bg-sky-100 px-3 py-1 text-sm font-semibold text-sky-800">Agency replied</span>;
+  return <span className="whitespace-nowrap rounded-full bg-slate-100 px-3 py-1 text-sm font-semibold text-slate-700">Waiting</span>;
+}
+
+export function ReportDetail({ report, onChange, onBack }: { report: Report; onChange: (r: Report) => void; onBack: () => void }) {
+  const [busy, setBusy] = useState<string | null>(null);
+  const [followUp, setFollowUp] = useState<{ step: string; letter: Letter; level: number } | null>(null);
+  const [refInput, setRefInput] = useState(report.referenceNumber);
+  const [openLetter, setOpenLetter] = useState<number | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  const agency = getAgency(report.agencyId);
+  const sentAt = report.history.find((h) => h.kind === "sent")?.at ?? report.createdAt;
+  const age = daysBetween(new Date(sentAt), new Date());
+  const lastLevel = ESCALATION_STEPS.length - 1;
+
+  async function act(action: "fixed" | "acknowledged" | "not-fixed" | "reference") {
+    setError(null);
+    try {
+      onChange(await api<Report>(`/api/reports/${report.id}`, { action, referenceNumber: refInput }, "PATCH"));
+    } catch {
+      setError("Couldn't save that. Please try again.");
+    }
+  }
+
+  async function startFollowUp() {
+    setBusy("Writing your follow-up…");
+    setError(null);
+    try {
+      setFollowUp(await api(`/api/reports/${report.id}/followup`, { mode: "draft" }));
+    } catch {
+      setError("Couldn't write the follow-up. Please try again.");
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function followUpSent() {
+    if (!followUp) return;
+    try {
+      onChange(await api<Report>(`/api/reports/${report.id}/followup`, { mode: "sent", letter: followUp.letter }));
+      setFollowUp(null);
+    } catch {
+      setError("Couldn't save. Please try again.");
+    }
+  }
+
+  if (busy) return <Spinner label={busy} />;
+
+  if (followUp) {
+    const recipient =
+      followUp.level === 3
+        ? report.agencyId === "sapn" || report.agencyId === "dit"
+          ? { name: "your local MP (Parliament of SA)", url: "https://www.parliament.sa.gov.au" }
+          : { name: `${agency.name} councillors`, url: agency.url }
+        : followUp.level >= lastLevel
+          ? agency.ombudsman
+          : undefined;
+    return (
+      <div className="flex flex-col gap-5">
+        <p className="text-sm font-semibold uppercase tracking-wide text-emerald-700">
+          Step {followUp.level + 1} of {ESCALATION_STEPS.length}
+        </p>
+        <h1 className="text-2xl font-bold">{followUp.step}</h1>
+        <Card tone="info">
+          <p>
+            {followUp.level === 1 && `A short, polite nudge to ${agency.name}. Most reports get moving at this point.`}
+            {followUp.level === 2 && `A formal complaint asks ${agency.name} to respond under their complaints process.`}
+            {followUp.level === 3 && "Your local councillor or state MP can push the agency on your behalf. You can find their contact details on your council's website."}
+            {followUp.level >= lastLevel && `${agency.ombudsman.name} independently reviews complaints when an agency hasn't dealt with an issue properly.`}
+          </p>
+        </Card>
+        <SendLetter letter={followUp.letter} onChange={(l) => setFollowUp({ ...followUp, letter: l })} agency={agency} photo={report.photo} recipient={recipient} />
+        <Button onClick={followUpSent}>✓ I&apos;ve sent it</Button>
+        <Button variant="ghost" onClick={() => setFollowUp(null)}>
+          Not now
+        </Button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-col gap-5">
+      <button onClick={onBack} className="self-start text-slate-600 hover:text-slate-900">
+        ← All reports
+      </button>
+
+      {report.photo && (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={report.photo} alt="" className="max-h-72 w-full rounded-2xl object-cover" />
+      )}
+
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <p className="text-sm text-slate-600">
+            {ISSUE_ICONS[report.issueType]} {ISSUE_LABELS[report.issueType]}
+          </p>
+          <h1 className="text-2xl font-bold">{report.title}</h1>
+          <p className="text-slate-600">{report.address}</p>
+        </div>
+        <StatusPill r={report} />
+      </div>
+
+      {error && (
+        <div role="alert" className="rounded-xl bg-red-50 p-4 text-red-800">
+          {error}
+        </div>
+      )}
+
+      {report.status === "fixed" ? (
+        <Card tone="good">
+          <p className="text-xl font-bold">🎉 Fixed! Thanks for making your street better.</p>
+          <p className="mt-1 text-slate-700">It took {age} {age === 1 ? "day" : "days"} from your first report.</p>
+        </Card>
+      ) : isDue(report) ? (
+        <Card tone="warn">
+          <p className="text-xl font-bold">It&apos;s been {age} days. Is it fixed?</p>
+          <div className="mt-4 flex flex-col gap-3">
+            <Button onClick={() => act("fixed")}>Yes, it&apos;s fixed</Button>
+            {report.escalationLevel < lastLevel ? (
+              <Button variant="secondary" onClick={startFollowUp}>
+                No, write the next follow-up for me
+              </Button>
+            ) : (
+              <p className="text-slate-700">You&apos;ve taken every step on the list. Keep checking in, or contact a local journalist or community group.</p>
+            )}
+            <Button variant="ghost" onClick={() => act("not-fixed")}>
+              They&apos;re working on it, check again in a week
+            </Button>
+          </div>
+        </Card>
+      ) : (
+        <Card>
+          <p className="text-lg font-semibold">Next check-in: {niceDate(report.nextCheckAt)}</p>
+          <p className="mt-1 text-slate-600">We&apos;ll flag this report then, and write the follow-up if it isn&apos;t fixed.</p>
+          <div className="mt-4 flex flex-col gap-3">
+            <Button variant="secondary" onClick={() => act("fixed")}>
+              It&apos;s already fixed
+            </Button>
+          </div>
+        </Card>
+      )}
+
+      {report.status !== "fixed" && (
+        <Card>
+          <label className="flex flex-col gap-2">
+            <span className="font-semibold">Did they give you a reference number?</span>
+            <span className="text-sm text-slate-600">Adding it makes your follow-ups much harder to ignore.</span>
+            <div className="flex gap-2">
+              <input
+                className="min-w-0 flex-1 rounded-xl border-2 border-slate-200 p-3 text-base"
+                placeholder="e.g. CRM-123456"
+                value={refInput}
+                onChange={(e) => setRefInput(e.target.value)}
+              />
+              <button
+                onClick={() => act(report.status === "sent" ? "acknowledged" : "reference")}
+                disabled={!refInput.trim() || refInput === report.referenceNumber}
+                className="rounded-xl bg-slate-900 px-5 font-semibold text-white disabled:bg-slate-300"
+              >
+                Save
+              </button>
+            </div>
+          </label>
+        </Card>
+      )}
+
+      <section aria-label="Escalation steps">
+        <h2 className="mb-3 text-lg font-bold">How we keep it moving</h2>
+        <ol className="flex flex-col gap-2">
+          {ESCALATION_STEPS.map((s, i) => (
+            <li key={s.title} className="flex items-center gap-3">
+              <span
+                className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sm font-bold ${
+                  i <= report.escalationLevel ? "bg-emerald-600 text-white" : "bg-slate-200 text-slate-500"
+                }`}
+              >
+                {i <= report.escalationLevel ? "✓" : i + 1}
+              </span>
+              <span className={i <= report.escalationLevel ? "font-semibold" : "text-slate-500"}>{s.title}</span>
+            </li>
+          ))}
+        </ol>
+      </section>
+
+      <section aria-label="History">
+        <h2 className="mb-3 text-lg font-bold">History</h2>
+        <ul className="flex flex-col gap-3">
+          {[...report.history].reverse().map((h, i) => (
+            <li key={i} className="rounded-xl bg-white p-4 shadow-sm">
+              <p className="text-sm text-slate-500">{niceDate(h.at)}</p>
+              <p className="font-semibold">{h.text}</p>
+              {h.letter && (
+                <>
+                  <button className="mt-1 text-sm text-emerald-700 underline" onClick={() => setOpenLetter(openLetter === i ? null : i)}>
+                    {openLetter === i ? "Hide message" : "Show message"}
+                  </button>
+                  {openLetter === i && (
+                    <pre className="mt-2 whitespace-pre-wrap font-sans text-sm text-slate-700">
+                      {h.letter.subject}
+                      {"\n\n"}
+                      {h.letter.body}
+                    </pre>
+                  )}
+                </>
+              )}
+            </li>
+          ))}
+        </ul>
+      </section>
+    </div>
+  );
+}
