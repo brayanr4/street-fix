@@ -3,7 +3,8 @@
 import { useEffect, useState, useSyncExternalStore } from "react";
 import { NewReport } from "@/components/NewReport";
 import { isDue, ReportDetail, StatusPill } from "@/components/ReportDetail";
-import { Button, Card, niceDate, Spinner } from "@/components/ui";
+import { api, Button, Card, niceDate, Spinner } from "@/components/ui";
+import { saveMe } from "@/lib/me";
 import { getAgency } from "@/lib/agencies";
 import { reportStore } from "@/lib/local";
 import { Camera } from "lucide-react";
@@ -17,7 +18,48 @@ export default function Home() {
   const reports = useSyncExternalStore(reportStore.subscribe, reportStore.get, reportStore.getServer);
   const [saveFailed, setSaveFailed] = useState(false);
 
+  const [notice, setNotice] = useState<string | null>(null);
+
   useEffect(() => window.scrollTo({ top: 0 }), [view]);
+
+  // Opens a report from a link in one of our emails, and keeps autopilot reports in step
+  // with what has happened on the server (follow-ups sent, "it's fixed" taps in email).
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const id = params.get("report");
+    const key = params.get("k");
+    const done = params.get("done");
+    if (params.get("t") && params.get("e")) saveMe({ token: params.get("t")!, tokenEmail: params.get("e")! });
+    if (params.size) window.history.replaceState(null, "", "/");
+    if (params.get("missing")) setTimeout(() => setNotice("That link has expired or the report was removed."));
+
+    const refresh = async (rid: string, k: string) => {
+      try {
+        const { report } = await api<{ report: Report }>(`/api/r/${rid}?k=${encodeURIComponent(k)}`);
+        const local = reportStore.get().find((x) => x.id === rid);
+        reportStore.upsert({ ...report, photo: local?.photo ?? report.photo });
+        return true;
+      } catch {
+        return false;
+      }
+    };
+
+    if (id && key) {
+      refresh(id, key).then((ok) => {
+        if (!ok) return setNotice("We couldn't open that report. Check your connection and try again.");
+        setView({ name: "report", id });
+        const messages: Record<string, string> = {
+          confirm: "Thanks. Your report has been sent.",
+          fixed: "Great news. We've marked it as fixed and stopped the follow-ups.",
+          snooze: "Got it. We'll check again in a week.",
+          stop: "Follow-ups are stopped for this report.",
+          error: "Something went wrong sending your report. Please try the link again in a minute.",
+        };
+        if (done && messages[done]) setNotice(messages[done]);
+      });
+    }
+    for (const r of reportStore.get()) if (r.tracking && r.id !== id && r.status !== "fixed") refresh(r.id, r.tracking.key);
+  }, []);
 
   const upsert = (r: Report) => setSaveFailed(!reportStore.upsert(r));
 
@@ -52,8 +94,18 @@ export default function Home() {
           Your browser didn&apos;t let us save this report (private browsing or full storage), so it will disappear when you close this tab.
         </div>
       )}
+      {notice && (
+        <div role="status" className="mb-4 flex items-start justify-between gap-3 rounded-xl bg-green-50 p-4 text-green-900">
+          <span>{notice}</span>
+          <button onClick={() => setNotice(null)} className="text-sm font-semibold underline">
+            Close
+          </button>
+        </div>
+      )}
       {body}
-      <p className="mt-10 text-center text-xs text-slate-600">Your reports and photos are saved only on this device.</p>
+      <p className="mt-10 text-center text-xs text-slate-600">
+        Your reports are saved on this device. Reports that Street Fix sends for you are also kept on our server so we can follow them up.
+      </p>
     </main>
   );
 }

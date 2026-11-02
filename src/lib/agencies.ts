@@ -1,6 +1,7 @@
 import type { IssueType } from "./types";
 
-// Adelaide routing data, checked against official sites on 2026-11-02. Where a council
+// Adelaide routing data, checked against official sites on 2026-11-02. Emails are each
+// council's published general enquiries address, which forwards to the right team. Where a council
 // has a dedicated "report an issue" page we link straight to it; otherwise to its
 // contact or home page. Council sites move pages often, so re-check every few months.
 
@@ -12,35 +13,39 @@ export type Agency = {
   phone?: string;
   email?: string;
   // Who a complaint escalates to when the agency itself doesn't act.
-  ombudsman: { name: string; url: string };
+  ombudsman: { name: string; url: string; email?: string };
 };
 
-const SA_OMBUDSMAN = { name: "Ombudsman SA", url: "https://www.ombudsman.sa.gov.au/make-a-complaint/how-to-make-a-complaint" };
+const SA_OMBUDSMAN = {
+  name: "Ombudsman SA",
+  url: "https://www.ombudsman.sa.gov.au/make-a-complaint/how-to-make-a-complaint",
+  email: "ombudsman@ombudsman.sa.gov.au",
+};
 const ENERGY_OMBUDSMAN = {
   name: "Energy and Water Ombudsman SA",
   url: "https://ewosa.com.au/submit-a-complaint",
 };
 
 export const COUNCILS = [
-  { id: "adelaide", name: "City of Adelaide", site: "https://customer.cityofadelaide.com.au/", match: ["city of adelaide", "adelaide city council"] },
-  { id: "adelaide-hills", name: "Adelaide Hills Council", site: "https://www.ahc.sa.gov.au/contact-us", match: ["adelaide hills"] },
-  { id: "burnside", name: "City of Burnside", site: "https://burnside.sa.gov.au/Online-Services/Action-Burnside", match: ["burnside"] },
-  { id: "campbelltown", name: "Campbelltown City Council", site: "https://www.campbelltown.sa.gov.au", match: ["campbelltown"] },
-  { id: "charles-sturt", name: "City of Charles Sturt", site: "https://www.charlessturt.sa.gov.au", match: ["charles sturt"] },
-  { id: "gawler", name: "Town of Gawler", site: "https://www.gawler.sa.gov.au/services/customer-service", match: ["gawler"] },
-  { id: "holdfast-bay", name: "City of Holdfast Bay", site: "https://www.holdfast.sa.gov.au/report-an-issue", match: ["holdfast"] },
-  { id: "marion", name: "City of Marion", site: "https://www.marion.sa.gov.au/about-council/contact-and-connect-with-us", match: ["marion"] },
-  { id: "mitcham", name: "City of Mitcham", site: "https://www.mitchamcouncil.sa.gov.au/services/click-and-connect", match: ["mitcham"] },
-  { id: "npsp", name: "City of Norwood Payneham & St Peters", site: "https://www.npsp.sa.gov.au/our_services/online_services_listing", match: ["norwood", "payneham"] },
-  { id: "onkaparinga", name: "City of Onkaparinga", site: "https://www.onkaparingacity.com/Council", match: ["onkaparinga"] },
-  { id: "playford", name: "City of Playford", site: "https://www.playford.sa.gov.au/council/contact-us/playford-online-services", match: ["playford"] },
-  { id: "pae", name: "City of Port Adelaide Enfield", site: "https://www.cityofpae.sa.gov.au/connect/contact-us", match: ["port adelaide enfield", "port adelaide"] },
-  { id: "prospect", name: "City of Prospect", site: "https://www.prospect.sa.gov.au", match: ["prospect"] },
-  { id: "salisbury", name: "City of Salisbury", site: "https://www.salisbury.sa.gov.au", match: ["salisbury"] },
-  { id: "tea-tree-gully", name: "City of Tea Tree Gully", site: "https://www.teatreegully.sa.gov.au/council/my.teatreegully-report-an-issue-or-lodge-a-work-request", match: ["tea tree gully"] },
-  { id: "unley", name: "City of Unley", site: "https://www.unley.sa.gov.au/Report-an-issue", match: ["unley"] },
-  { id: "walkerville", name: "Town of Walkerville", site: "https://www.walkerville.sa.gov.au", match: ["walkerville"] },
-  { id: "west-torrens", name: "City of West Torrens", site: "https://www.westtorrens.sa.gov.au/Services/Report-it-report-an-issue", match: ["west torrens"] },
+  { id: "adelaide", name: "City of Adelaide", email: "city@cityofadelaide.com.au", site: "https://customer.cityofadelaide.com.au/", match: ["city of adelaide", "adelaide city council"] },
+  { id: "adelaide-hills", name: "Adelaide Hills Council", email: "mail@ahc.sa.gov.au", site: "https://www.ahc.sa.gov.au/contact-us", match: ["adelaide hills"] },
+  { id: "burnside", name: "City of Burnside", email: "burnside@burnside.sa.gov.au", site: "https://burnside.sa.gov.au/Online-Services/Action-Burnside", match: ["burnside"] },
+  { id: "campbelltown", name: "Campbelltown City Council", email: "mail@campbelltown.sa.gov.au", site: "https://www.campbelltown.sa.gov.au", match: ["campbelltown"] },
+  { id: "charles-sturt", name: "City of Charles Sturt", email: "council@charlessturt.sa.gov.au", site: "https://www.charlessturt.sa.gov.au", match: ["charles sturt"] },
+  { id: "gawler", name: "Town of Gawler", email: "council@gawler.sa.gov.au", site: "https://www.gawler.sa.gov.au/services/customer-service", match: ["gawler"] },
+  { id: "holdfast-bay", name: "City of Holdfast Bay", email: "mail@holdfast.sa.gov.au", site: "https://www.holdfast.sa.gov.au/report-an-issue", match: ["holdfast"] },
+  { id: "marion", name: "City of Marion", email: "council@marion.sa.gov.au", site: "https://www.marion.sa.gov.au/about-council/contact-and-connect-with-us", match: ["marion"] },
+  { id: "mitcham", name: "City of Mitcham", email: "mitcham@mitchamcouncil.sa.gov.au", site: "https://www.mitchamcouncil.sa.gov.au/services/click-and-connect", match: ["mitcham"] },
+  { id: "npsp", name: "City of Norwood Payneham & St Peters", email: "townhall@npsp.sa.gov.au", site: "https://www.npsp.sa.gov.au/our_services/online_services_listing", match: ["norwood", "payneham"] },
+  { id: "onkaparinga", name: "City of Onkaparinga", email: "mail@onkaparinga.sa.gov.au", site: "https://www.onkaparingacity.com/Council", match: ["onkaparinga"] },
+  { id: "playford", name: "City of Playford", email: "playford@playford.sa.gov.au", site: "https://www.playford.sa.gov.au/council/contact-us/playford-online-services", match: ["playford"] },
+  { id: "pae", name: "City of Port Adelaide Enfield", email: "service@cityofpae.sa.gov.au", site: "https://www.cityofpae.sa.gov.au/connect/contact-us", match: ["port adelaide enfield", "port adelaide"] },
+  { id: "prospect", name: "City of Prospect", email: "admin@prospect.sa.gov.au", site: "https://www.prospect.sa.gov.au", match: ["prospect"] },
+  { id: "salisbury", name: "City of Salisbury", email: "city@salisbury.sa.gov.au", site: "https://www.salisbury.sa.gov.au", match: ["salisbury"] },
+  { id: "tea-tree-gully", name: "City of Tea Tree Gully", email: "customerservice@cttg.sa.gov.au", site: "https://www.teatreegully.sa.gov.au/council/my.teatreegully-report-an-issue-or-lodge-a-work-request", match: ["tea tree gully"] },
+  { id: "unley", name: "City of Unley", email: "pobox1@unley.sa.gov.au", site: "https://www.unley.sa.gov.au/Report-an-issue", match: ["unley"] },
+  { id: "walkerville", name: "Town of Walkerville", email: "walkerville@walkerville.sa.gov.au", site: "https://www.walkerville.sa.gov.au", match: ["walkerville"] },
+  { id: "west-torrens", name: "City of West Torrens", email: "info@wtcc.sa.gov.au", site: "https://www.westtorrens.sa.gov.au/Services/Report-it-report-an-issue", match: ["west torrens"] },
 ];
 
 export const SAPN: Agency = {
@@ -48,6 +53,8 @@ export const SAPN: Agency = {
   name: "SA Power Networks",
   howToReport: "Streetlight faults go to SA Power Networks through their online form.",
   url: "https://slo.apps.sapowernetworks.com.au/",
+  // Their published address for general enquiries and complaints.
+  email: "customerservice@sapowernetworks.com.au",
   ombudsman: ENERGY_OMBUDSMAN,
 };
 
@@ -68,6 +75,7 @@ export function councilAgency(councilId: string): Agency {
     name: c.name,
     howToReport: `Use the "report an issue" or "request a service" page on the ${c.name} website.`,
     url: c.site,
+    email: c.email,
     ombudsman: SA_OMBUDSMAN,
   };
 }
@@ -129,3 +137,18 @@ export const ESCALATION_STEPS = [
   { title: "Letter to your local representative", waitDays: 21 },
   { title: "Complaint to the ombudsman", waitDays: 30 },
 ];
+
+export type Recipient = { name: string; email?: string; url: string; greeting?: string };
+
+// Who each step on the ladder goes to. A missing email means the person has to send that
+// step themselves (DIT and the energy ombudsman only take reports by phone or web form).
+export function recipientFor(agencyId: string, level: number): Recipient {
+  const agency = getAgency(agencyId);
+  if (level === 3) {
+    if (agencyId === "sapn" || agencyId === "dit")
+      return { name: "your local MP (Parliament of SA)", url: "https://www.parliament.sa.gov.au" };
+    return { name: `${agency.name} councillors`, email: agency.email, url: agency.url, greeting: "Mayor and Councillors" };
+  }
+  if (level >= ESCALATION_STEPS.length - 1) return { ...agency.ombudsman };
+  return { name: agency.name, email: agency.email, url: agency.url };
+}

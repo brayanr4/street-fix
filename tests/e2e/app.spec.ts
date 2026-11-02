@@ -36,6 +36,11 @@ async function mockPlace(page: Page, place: { address: string; councilId: string
   await page.route("**/api/place", (route) => route.fulfill({ json: place }));
 }
 
+// These tests cover sending by hand. Sending by email is covered in autopilot.spec.ts.
+test.beforeEach(async ({ page }) => {
+  await page.route("**/api/config", (route) => route.fulfill({ json: { autoSend: false } }));
+});
+
 test.describe("with location", () => {
   test.use({ geolocation: { latitude: -34.9285, longitude: 138.6007 }, permissions: ["geolocation"] });
 

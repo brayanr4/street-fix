@@ -13,10 +13,17 @@ export default defineConfig({
     launchOptions: process.env.PW_CHROMIUM_PATH ? { executablePath: process.env.PW_CHROMIUM_PATH } : {},
   },
   webServer: {
-    command: "npm run build && npm start -- -p 3123",
+    command: "rm -rf .data/e2e && npm run build && npm start -- -p 3123",
     url: "http://localhost:3123",
     reuseExistingServer: false,
     timeout: 180_000,
-    env: { ANTHROPIC_API_KEY: "", STREET_FIX_RATE_LIMIT: "10000" },
+    // Emails are written to files instead of being sent.
+    env: {
+      ANTHROPIC_API_KEY: "",
+      STREET_FIX_RATE_LIMIT: "10000",
+      MAIL_OUTBOX_DIR: ".data/e2e/outbox",
+      STREET_FIX_DATA_DIR: ".data/e2e/reports",
+      CRON_SECRET: "e2e-secret",
+    },
   },
 });

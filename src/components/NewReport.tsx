@@ -5,7 +5,8 @@ import { COUNCILS, routeIssue, type Agency } from "@/lib/agencies";
 import type { Place } from "@/lib/geo";
 import { createReport } from "@/lib/reports";
 import { ISSUE_LABELS, ISSUE_TYPES, type Analysis, type IssueType, type Letter, type Report, type Severity } from "@/lib/types";
-import { Camera, MapPin } from "lucide-react";
+import { loadMe, saveMe } from "@/lib/me";
+import { Camera, Mail, MapPin } from "lucide-react";
 import { IssueIcon } from "./icons";
 import { api, Button, friendly, Card, SendLetter, Spinner, Steps } from "./ui";
 
@@ -65,6 +66,13 @@ export function NewReport({ onDone, onCancel }: { onDone: (r: Report) => void; o
   const [letter, setLetter] = useState<Letter | null>(null);
   const [place, setPlace] = useState<{ status: "looking" | "found" | "failed"; councilId: string | null; outsideArea: string | null } | null>(null);
   const councilPicked = useRef(false);
+  const [autoSend, setAutoSend] = useState(false);
+  const [manual, setManual] = useState(false);
+  // Only rendered after a tap, never on the server, so reading storage here is safe.
+  const [me, setMe] = useState(() => {
+    const saved = typeof window === "undefined" ? null : loadMe();
+    return { name: saved?.name ?? "", email: saved?.email ?? "", phone: saved?.phone ?? "" };
+  });
   const fileInput = useRef<HTMLInputElement>(null);
 
   const set = (patch: Partial<Draft>) => setD((prev) => ({ ...prev, ...patch }));
@@ -86,6 +94,11 @@ export function NewReport({ onDone, onCancel }: { onDone: (r: Report) => void; o
         setPlace({ status: "failed", councilId: null, outsideArea: null });
       }
     }
+
+    // Whether this deployment can email agencies itself, and the person's saved details.
+    api<{ autoSend: boolean }>("/api/config")
+      .then((c) => setAutoSend(c.autoSend))
+      .catch(() => setAutoSend(false));
 
     navigator.geolocation?.getCurrentPosition(
       (pos) => {
@@ -157,6 +170,26 @@ export function NewReport({ onDone, onCancel }: { onDone: (r: Report) => void; o
     void _note;
     void _photo;
     onDone(createReport({ ...fields, photo: thumb, referenceNumber: "" }, letter));
+  }
+
+  async function sendForMe() {
+    if (!letter) return;
+    setBusy("Sending your report…");
+    setError(null);
+    try {
+      const saved = loadMe();
+      const email = me.email.trim();
+      const reporterToken = saved.tokenEmail?.toLowerCase() === email.toLowerCase() ? saved.token : undefined;
+      const { note: _note, ...fields } = d;
+      void _note;
+      const res = await api<{ report: Report }>("/api/reports", { ...fields, letter, reporter: me, reporterToken });
+      saveMe({ name: me.name.trim(), email, phone: me.phone.trim() });
+      onDone(res.report);
+    } catch (e) {
+      setError(e instanceof Error && !e.message.startsWith("Request failed") ? e.message : "Something went wrong sending your report. Please try again.");
+    } finally {
+      setBusy(null);
+    }
   }
 
   const routed = routeIssue(d.issueType, d.councilId, d.onMainRoad);
@@ -345,7 +378,63 @@ export function NewReport({ onDone, onCancel }: { onDone: (r: Report) => void; o
         </>
       )}
 
-      {step === 2 && agency && letter && (
+      {step === 2 && agency && letter && autoSend && agency.email && !manual && (
+        <>
+          <h1 className="text-2xl font-bold">Send it to {agency.name}</h1>
+          <Card tone="info">
+            <p className="flex items-start gap-2">
+              <Mail className="mt-1 h-5 w-5 shrink-0" aria-hidden />
+              <span>
+                We&apos;ll email this to {agency.name} with your photo, and copy you in so their reply comes straight to you. If it isn&apos;t
+                fixed, we send the follow-ups too. You&apos;ll get an email before each one.
+              </span>
+            </p>
+          </Card>
+          <label className="flex flex-col gap-1">
+            <span className="text-sm font-semibold text-slate-600">Subject</span>
+            <input className="rounded-xl border-2 border-slate-200 p-3 text-base" value={letter.subject} onChange={(e) => setLetter({ ...letter, subject: e.target.value })} />
+          </label>
+          <label className="flex flex-col gap-1">
+            <span className="text-sm font-semibold text-slate-600">Message (you can edit it)</span>
+            <textarea
+              className="min-h-64 rounded-xl border-2 border-slate-200 p-3 text-base leading-relaxed"
+              value={letter.body}
+              onChange={(e) => setLetter({ ...letter, body: e.target.value })}
+            />
+          </label>
+          <fieldset className="flex flex-col gap-3">
+            <legend className="mb-1 font-semibold">Your details</legend>
+            <p className="-mt-1 text-sm text-slate-600">Councils need a name and email to act on a report. We only use them for this report.</p>
+            <label className="flex flex-col gap-1">
+              <span className="text-sm font-semibold text-slate-600">Your name</span>
+              <input className="rounded-xl border-2 border-slate-200 p-3 text-base" autoComplete="name" value={me.name} onChange={(e) => setMe({ ...me, name: e.target.value })} />
+            </label>
+            <label className="flex flex-col gap-1">
+              <span className="text-sm font-semibold text-slate-600">Your email</span>
+              <input
+                className="rounded-xl border-2 border-slate-200 p-3 text-base"
+                type="email"
+                autoComplete="email"
+                inputMode="email"
+                value={me.email}
+                onChange={(e) => setMe({ ...me, email: e.target.value })}
+              />
+            </label>
+            <label className="flex flex-col gap-1">
+              <span className="text-sm font-semibold text-slate-600">Phone (optional)</span>
+              <input className="rounded-xl border-2 border-slate-200 p-3 text-base" type="tel" autoComplete="tel" value={me.phone} onChange={(e) => setMe({ ...me, phone: e.target.value })} />
+            </label>
+          </fieldset>
+          <Button onClick={sendForMe} disabled={!me.name.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(me.email.trim())}>
+            Send my report
+          </Button>
+          <Button variant="ghost" onClick={() => setManual(true)}>
+            I&apos;d rather send it myself
+          </Button>
+        </>
+      )}
+
+      {step === 2 && agency && letter && (!autoSend || !agency.email || manual) && (
         <>
           <h1 className="text-2xl font-bold">Send it to {agency.name}</h1>
           <Card tone="info">
@@ -359,7 +448,7 @@ export function NewReport({ onDone, onCancel }: { onDone: (r: Report) => void; o
             <Button onClick={markSent}>I&apos;ve sent it, start tracking</Button>
             <p className="mt-2 text-center text-sm text-slate-600">We&apos;ll remind you to check in, and write the follow-up for you if nothing happens.</p>
           </div>
-          <Button variant="ghost" onClick={() => setStep(1)}>
+          <Button variant="ghost" onClick={() => (manual ? setManual(false) : setStep(1))}>
             Back
           </Button>
         </>

@@ -65,4 +65,18 @@ export type Report = {
   escalationLevel: number;
   nextCheckAt: string;
   history: HistoryEntry[];
+  // Present when Street Fix sends the emails itself. `key` is the secret that lets
+  // this browser (and the links in the person's emails) read and update the report.
+  tracking?: Tracking;
 };
+
+export type Tracking = {
+  key: string;
+  email: string;
+  // False until the person taps the link in the confirmation email.
+  confirmed: boolean;
+  // The person has asked Street Fix to stop sending follow-ups.
+  stopped?: boolean;
+};
+
+export type Reporter = { name: string; email: string; phone?: string };

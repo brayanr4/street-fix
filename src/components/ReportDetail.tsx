@@ -4,16 +4,21 @@ import { useState } from "react";
 import { ESCALATION_STEPS, getAgency } from "@/lib/agencies";
 import { applyAction, applyFollowUpSent, type ReportAction } from "@/lib/reports";
 import { ISSUE_LABELS, type Letter, type Report } from "@/lib/types";
-import { ArrowLeft, Check } from "lucide-react";
+import { ArrowLeft, Check, Mail } from "lucide-react";
 import { IssueIcon } from "./icons";
 import { api, Button, Card, friendly, daysBetween, niceDate, SendLetter, Spinner } from "./ui";
 
+// Reports on autopilot follow up by themselves, so they never need a manual check-in.
+export const onAutopilot = (r: Report) => Boolean(r.tracking && !r.tracking.stopped && r.status !== "fixed");
+
 export function isDue(r: Report) {
-  return r.status !== "fixed" && new Date(r.nextCheckAt) <= new Date();
+  return !onAutopilot(r) && r.status !== "fixed" && new Date(r.nextCheckAt) <= new Date();
 }
 
 export function StatusPill({ r }: { r: Report }) {
   if (r.status === "fixed") return <span className="whitespace-nowrap rounded-full bg-green-100 px-3 py-1 text-sm font-semibold text-green-800">Fixed</span>;
+  if (r.tracking && !r.tracking.confirmed && !r.tracking.stopped)
+    return <span className="whitespace-nowrap rounded-full bg-amber-100 px-3 py-1 text-sm font-semibold text-amber-900">Confirm email</span>;
   if (isDue(r)) return <span className="whitespace-nowrap rounded-full bg-amber-100 px-3 py-1 text-sm font-semibold text-amber-900">Check in</span>;
   if (r.status === "acknowledged") return <span className="whitespace-nowrap rounded-full bg-sky-100 px-3 py-1 text-sm font-semibold text-sky-800">Agency replied</span>;
   return <span className="whitespace-nowrap rounded-full bg-slate-100 px-3 py-1 text-sm font-semibold text-slate-700">Waiting</span>;
@@ -31,8 +36,23 @@ export function ReportDetail({ report, onChange, onBack }: { report: Report; onC
   const age = daysBetween(new Date(sentAt), new Date());
   const lastLevel = ESCALATION_STEPS.length - 1;
 
-  function act(action: ReportAction) {
-    onChange(applyAction(report, action, refInput));
+  async function act(action: ReportAction | "stop") {
+    if (!report.tracking) {
+      if (action !== "stop") onChange(applyAction(report, action, refInput));
+      return;
+    }
+    // Autopilot reports live on the server, which sends the follow-ups.
+    setBusy("Saving…");
+    setError(null);
+    try {
+      const serverAction = action === "not-fixed" ? "snooze" : action;
+      const res = await api<{ report: Report }>(`/api/r/${report.id}`, { k: report.tracking.key, action: serverAction, referenceNumber: refInput });
+      onChange({ ...res.report, photo: report.photo ?? res.report.photo });
+    } catch (e) {
+      setError(friendly(e, "Couldn't save that. Check your connection and try again."));
+    } finally {
+      setBusy(null);
+    }
   }
 
   async function startFollowUp() {
@@ -115,6 +135,34 @@ export function ReportDetail({ report, onChange, onBack }: { report: Report; onC
         </div>
       )}
 
+      {report.status === "fixed" ? null : report.tracking && !report.tracking.confirmed && !report.tracking.stopped ? (
+        <Card tone="warn">
+          <p className="flex items-start gap-2 text-xl font-bold">
+            <Mail className="mt-1 h-5 w-5 shrink-0" aria-hidden /> Check your email
+          </p>
+          <p className="mt-2 text-slate-700">
+            Tap the link we sent to <b>{report.tracking.email}</b> and your report goes to {agency.name} straight away. You only need to do this once.
+          </p>
+        </Card>
+      ) : onAutopilot(report) ? (
+        <Card>
+          <p className="text-lg font-semibold">Street Fix is following this up for you</p>
+          <p className="mt-1 text-slate-600">
+            {report.escalationLevel < lastLevel
+              ? `If it isn't fixed, we'll send the ${ESCALATION_STEPS[report.escalationLevel + 1].title.toLowerCase()} after ${niceDate(report.nextCheckAt)}. We'll email you two days before, so you can tell us if it's fixed.`
+              : "We've sent every step on the list. We'll email you if anything changes."}
+          </p>
+          <div className="mt-4 flex flex-col gap-3">
+            <Button variant="secondary" onClick={() => act("fixed")}>
+              It&apos;s fixed
+            </Button>
+            <Button variant="ghost" onClick={() => act("stop")}>
+              Stop the follow-ups
+            </Button>
+          </div>
+        </Card>
+      ) : null}
+
       {report.status === "fixed" ? (
         <Card tone="good">
           <p className="text-xl font-bold">Fixed. Thanks for making your street better.</p>
@@ -137,7 +185,7 @@ export function ReportDetail({ report, onChange, onBack }: { report: Report; onC
             </Button>
           </div>
         </Card>
-      ) : (
+      ) : report.tracking && !report.tracking.stopped ? null : (
         <Card>
           <p className="text-lg font-semibold">Next check-in: {niceDate(report.nextCheckAt)}</p>
           <p className="mt-1 text-slate-600">We&apos;ll flag this report then, and write the follow-up if it isn&apos;t fixed.</p>

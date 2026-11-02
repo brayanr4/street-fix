@@ -15,7 +15,7 @@ const eslintConfig = defineConfig([
     // Netlify build output and test reports.
     ".netlify/**",
     "test-results/**",
-    "playwright-report/**",
+    "playwright-report/**", ".data/**",
   ]),
 ]);
 

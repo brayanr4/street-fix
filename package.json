@@ -13,6 +13,7 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.135.0",
+    "@netlify/blobs": "^11.1.7",
     "lucide-react": "^0.577.0",
     "next": "16.4.2",
     "react": "19.3.0",
