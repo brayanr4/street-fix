@@ -1,3 +1,13 @@
+# Netlify only serves the Next.js app (pages and API routes) when its Next.js
+# runtime is enabled here. Without it, .next is uploaded as plain static files
+# and every page returns Netlify's "Page not found".
 [build]
   command = "npm run build"
   publish = ".next"
+
+[build.environment]
+  NODE_VERSION = "22"
+  NEXT_TELEMETRY_DISABLED = "1"
+
+[[plugins]]
+  package = "@netlify/plugin-nextjs"
