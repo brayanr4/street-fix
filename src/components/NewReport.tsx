@@ -166,7 +166,7 @@ export function NewReport({ onDone, onCancel }: { onDone: (r: Report) => void; o
             onChange={(e) => pickPhoto(e.target.files?.[0])}
           />
           {d.photo ? (
-            <button onClick={() => fileInput.current?.click()} className="overflow-hidden rounded-2xl" aria-label="Retake photo">
+            <button onClick={() => fileInput.current?.click()} className="overflow-hidden rounded-2xl">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={d.photo} alt="Your photo of the problem" className="max-h-80 w-full object-cover" />
               <span className="block bg-slate-100 py-2 text-sm text-slate-600">Tap to retake</span>

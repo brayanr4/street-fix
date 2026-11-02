@@ -33,6 +33,17 @@ Without an API key the app still works. You just type the description yourself, 
 - Reports are saved in the browser (localStorage) of the phone that made them. Nobody else can see your photos or locations, and the server needs no database. The catch: clearing browser data or switching phones loses them. Accounts and a database come later.
 - `src/lib/rateLimit.ts` caps AI requests per visitor (30 per 10 minutes by default, set `STREET_FIX_RATE_LIMIT` to change) so a public site can't run up your API bill.
 
+## Tests
+
+```bash
+npm run lint        # code style
+npm run typecheck   # TypeScript
+npm test            # unit tests: routing, follow-up logic, letters, rate limit
+npm run test:e2e    # phone-sized browser tests, including an accessibility scan
+```
+
+The browser tests need Chromium (`npx playwright install chromium` once). GitHub Actions runs all four on every push.
+
 ## Deploy to Netlify
 
 1. In Netlify choose **Add new site → Import an existing project**, pick GitHub and select this repository. Netlify detects Next.js and uses the settings in `netlify.toml`.
@@ -43,5 +54,5 @@ Without an API key the app still works. You just type the description yourself, 
 
 - Sending is semi-automatic: the person copies the message into the agency's form. Most councils don't offer a public API, so direct filing would need one integration per council.
 - Check-in reminders only show inside the app. Push or email reminders are the next step.
-- Council websites in `agencies.ts` should be checked, and each one linked straight to its "report an issue" page.
+- Council links were checked on 2 November 2026. Fourteen go straight to a "report an issue" or contact page, and five (Campbelltown, Charles Sturt, Prospect, Salisbury, Walkerville) go to the council's home page. Councils move pages often, so re-check every few months.
 - The main-road question is answered by the person. A future version could look up the state road network automatically.

@@ -1,7 +1,8 @@
 import type { IssueType } from "./types";
 
-// Adelaide routing data. Streetlight and state-road details come from sa.gov.au
-// and DIT pages; council websites should be re-checked before launch.
+// Adelaide routing data, checked against official sites on 2026-11-02. Where a council
+// has a dedicated "report an issue" page we link straight to it; otherwise to its
+// contact or home page. Council sites move pages often, so re-check every few months.
 
 export type Agency = {
   id: string;
@@ -14,32 +15,32 @@ export type Agency = {
   ombudsman: { name: string; url: string };
 };
 
-const SA_OMBUDSMAN = { name: "Ombudsman SA", url: "https://www.ombudsman.sa.gov.au" };
+const SA_OMBUDSMAN = { name: "Ombudsman SA", url: "https://www.ombudsman.sa.gov.au/make-a-complaint/how-to-make-a-complaint" };
 const ENERGY_OMBUDSMAN = {
   name: "Energy and Water Ombudsman SA",
-  url: "https://www.ewosa.com.au",
+  url: "https://ewosa.com.au/submit-a-complaint",
 };
 
 export const COUNCILS = [
-  { id: "adelaide", name: "City of Adelaide", site: "https://www.cityofadelaide.com.au", match: ["city of adelaide", "adelaide city council"] },
-  { id: "adelaide-hills", name: "Adelaide Hills Council", site: "https://www.ahc.sa.gov.au", match: ["adelaide hills"] },
-  { id: "burnside", name: "City of Burnside", site: "https://www.burnside.sa.gov.au", match: ["burnside"] },
+  { id: "adelaide", name: "City of Adelaide", site: "https://customer.cityofadelaide.com.au/", match: ["city of adelaide", "adelaide city council"] },
+  { id: "adelaide-hills", name: "Adelaide Hills Council", site: "https://www.ahc.sa.gov.au/contact-us", match: ["adelaide hills"] },
+  { id: "burnside", name: "City of Burnside", site: "https://burnside.sa.gov.au/Online-Services/Action-Burnside", match: ["burnside"] },
   { id: "campbelltown", name: "Campbelltown City Council", site: "https://www.campbelltown.sa.gov.au", match: ["campbelltown"] },
   { id: "charles-sturt", name: "City of Charles Sturt", site: "https://www.charlessturt.sa.gov.au", match: ["charles sturt"] },
-  { id: "gawler", name: "Town of Gawler", site: "https://www.gawler.sa.gov.au", match: ["gawler"] },
-  { id: "holdfast-bay", name: "City of Holdfast Bay", site: "https://www.holdfast.sa.gov.au", match: ["holdfast"] },
-  { id: "marion", name: "City of Marion", site: "https://www.marion.sa.gov.au", match: ["marion"] },
-  { id: "mitcham", name: "City of Mitcham", site: "https://www.mitchamcouncil.sa.gov.au", match: ["mitcham"] },
-  { id: "npsp", name: "City of Norwood Payneham & St Peters", site: "https://www.npsp.sa.gov.au", match: ["norwood", "payneham"] },
-  { id: "onkaparinga", name: "City of Onkaparinga", site: "https://www.onkaparingacity.com", match: ["onkaparinga"] },
-  { id: "playford", name: "City of Playford", site: "https://www.playford.sa.gov.au", match: ["playford"] },
-  { id: "pae", name: "City of Port Adelaide Enfield", site: "https://www.cityofpae.sa.gov.au", match: ["port adelaide enfield", "port adelaide"] },
+  { id: "gawler", name: "Town of Gawler", site: "https://www.gawler.sa.gov.au/services/customer-service", match: ["gawler"] },
+  { id: "holdfast-bay", name: "City of Holdfast Bay", site: "https://www.holdfast.sa.gov.au/report-an-issue", match: ["holdfast"] },
+  { id: "marion", name: "City of Marion", site: "https://www.marion.sa.gov.au/about-council/contact-and-connect-with-us", match: ["marion"] },
+  { id: "mitcham", name: "City of Mitcham", site: "https://www.mitchamcouncil.sa.gov.au/services/click-and-connect", match: ["mitcham"] },
+  { id: "npsp", name: "City of Norwood Payneham & St Peters", site: "https://www.npsp.sa.gov.au/our_services/online_services_listing", match: ["norwood", "payneham"] },
+  { id: "onkaparinga", name: "City of Onkaparinga", site: "https://www.onkaparingacity.com/Council", match: ["onkaparinga"] },
+  { id: "playford", name: "City of Playford", site: "https://www.playford.sa.gov.au/council/contact-us/playford-online-services", match: ["playford"] },
+  { id: "pae", name: "City of Port Adelaide Enfield", site: "https://www.cityofpae.sa.gov.au/connect/contact-us", match: ["port adelaide enfield", "port adelaide"] },
   { id: "prospect", name: "City of Prospect", site: "https://www.prospect.sa.gov.au", match: ["prospect"] },
   { id: "salisbury", name: "City of Salisbury", site: "https://www.salisbury.sa.gov.au", match: ["salisbury"] },
-  { id: "tea-tree-gully", name: "City of Tea Tree Gully", site: "https://www.teatreegully.sa.gov.au", match: ["tea tree gully"] },
-  { id: "unley", name: "City of Unley", site: "https://www.unley.sa.gov.au", match: ["unley"] },
+  { id: "tea-tree-gully", name: "City of Tea Tree Gully", site: "https://www.teatreegully.sa.gov.au/council/my.teatreegully-report-an-issue-or-lodge-a-work-request", match: ["tea tree gully"] },
+  { id: "unley", name: "City of Unley", site: "https://www.unley.sa.gov.au/Report-an-issue", match: ["unley"] },
   { id: "walkerville", name: "Town of Walkerville", site: "https://www.walkerville.sa.gov.au", match: ["walkerville"] },
-  { id: "west-torrens", name: "City of West Torrens", site: "https://www.westtorrens.sa.gov.au", match: ["west torrens"] },
+  { id: "west-torrens", name: "City of West Torrens", site: "https://www.westtorrens.sa.gov.au/Services/Report-it-report-an-issue", match: ["west torrens"] },
 ];
 
 export const SAPN: Agency = {

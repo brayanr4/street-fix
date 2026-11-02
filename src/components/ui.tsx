@@ -20,7 +20,7 @@ export function Button({
   type?: "button" | "submit";
 }) {
   const styles = {
-    primary: "bg-emerald-600 text-white hover:bg-emerald-700 disabled:bg-slate-300",
+    primary: "bg-emerald-700 text-white hover:bg-emerald-800 disabled:bg-slate-300",
     secondary: "bg-white text-slate-900 border-2 border-slate-200 hover:border-slate-400",
     ghost: "text-slate-600 hover:text-slate-900 underline-offset-4 hover:underline",
   }[variant];
