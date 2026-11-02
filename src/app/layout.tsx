@@ -10,10 +10,11 @@ const geistSans = Geist({
 export const metadata: Metadata = {
   title: "Street Fix",
   description: "Snap a problem on your street. Street Fix reports it to the right agency and follows up until it's fixed.",
+  appleWebApp: { capable: true, title: "Street Fix", statusBarStyle: "default" },
 };
 
 export const viewport: Viewport = {
-  themeColor: "#059669",
+  themeColor: "#047857",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

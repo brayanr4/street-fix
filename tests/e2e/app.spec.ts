@@ -162,3 +162,12 @@ test.describe("without location", () => {
     await noSideways(page);
   });
 });
+
+test("can be added to a phone's home screen", async ({ request }) => {
+  const res = await request.get("/manifest.webmanifest");
+  expect(res.ok()).toBe(true);
+  const manifest = await res.json();
+  expect(manifest).toMatchObject({ name: "Street Fix", display: "standalone", start_url: "/" });
+  for (const icon of manifest.icons) expect((await request.get(icon.src)).ok()).toBe(true);
+  expect((await request.get("/apple-icon.png")).ok()).toBe(true);
+});
