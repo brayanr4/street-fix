@@ -1,5 +1,6 @@
 "use client";
 
+import { Check, Copy, Download, ExternalLink, Phone } from "lucide-react";
 import { useState, type ReactNode } from "react";
 import type { Agency } from "@/lib/agencies";
 import type { Letter } from "@/lib/types";
@@ -20,11 +21,11 @@ export function Button({
   type?: "button" | "submit";
 }) {
   const styles = {
-    primary: "bg-emerald-700 text-white hover:bg-emerald-800 disabled:bg-slate-300",
+    primary: "bg-signal text-ink hover:bg-signal-dark disabled:bg-slate-200 disabled:text-slate-600",
     secondary: "bg-white text-slate-900 border-2 border-slate-200 hover:border-slate-400",
     ghost: "text-slate-600 hover:text-slate-900 underline-offset-4 hover:underline",
   }[variant];
-  const cls = `flex w-full min-h-14 items-center justify-center gap-2 rounded-2xl px-5 text-lg font-semibold transition focus:outline-none focus-visible:ring-4 focus-visible:ring-emerald-300 ${styles}`;
+  const cls = `flex w-full min-h-14 items-center justify-center gap-2 rounded-2xl px-5 text-lg font-semibold transition focus:outline-none focus-visible:ring-4 focus-visible:ring-ink/30 ${styles}`;
   if (href)
     return (
       <a
@@ -49,7 +50,7 @@ export function Card({ children, tone = "plain" }: { children: ReactNode; tone?:
     plain: "bg-white border-slate-200",
     info: "bg-sky-50 border-sky-200",
     warn: "bg-amber-50 border-amber-300",
-    good: "bg-emerald-50 border-emerald-300",
+    good: "bg-green-50 border-green-300",
   }[tone];
   return <div className={`rounded-2xl border-2 p-5 ${t}`}>{children}</div>;
 }
@@ -57,7 +58,7 @@ export function Card({ children, tone = "plain" }: { children: ReactNode; tone?:
 export function Spinner({ label }: { label: string }) {
   return (
     <div className="flex flex-col items-center gap-4 py-16 text-center" role="status" aria-live="polite">
-      <div className="h-12 w-12 animate-spin rounded-full border-4 border-emerald-200 border-t-emerald-600" />
+      <div className="h-12 w-12 animate-spin rounded-full border-4 border-slate-200 border-t-ink" />
       <p className="text-lg text-slate-700">{label}</p>
     </div>
   );
@@ -69,8 +70,8 @@ export function Steps({ current }: { current: number }) {
     <ol className="mb-6 flex items-center gap-2" aria-label="Progress">
       {labels.map((l, i) => (
         <li key={l} className="flex flex-1 flex-col items-center gap-1">
-          <div className={`h-2 w-full rounded-full ${i <= current ? "bg-emerald-600" : "bg-slate-200"}`} />
-          <span className={`text-sm ${i === current ? "font-semibold text-slate-900" : "text-slate-500"}`}>
+          <div className={`h-2 w-full rounded-full ${i <= current ? "bg-ink" : "bg-slate-200"}`} />
+          <span className={`text-sm ${i === current ? "font-semibold text-slate-900" : "text-slate-600"}`}>
             {i + 1}. {l}
           </span>
         </li>
@@ -119,18 +120,18 @@ export function SendLetter({ letter, onChange, agency, photo, recipient }: {
         />
       </label>
       <div className="flex flex-col gap-3">
-        <Button onClick={copy}>{copied ? "✓ Copied" : "1. Copy the message"}</Button>
+        <Button onClick={copy}>{copied ? <><Check className="h-5 w-5" aria-hidden /> Copied</> : <><Copy className="h-5 w-5" aria-hidden /> 1. Copy the message</>}</Button>
         <Button variant="secondary" href={target.url}>
-          2. Open {target.name} ↗
+          2. Open {target.name} <ExternalLink className="h-5 w-5" aria-hidden />
         </Button>
         {agency.phone && !recipient && (
           <Button variant="secondary" href={`tel:${agency.phone.replace(/\s/g, "")}`}>
-            📞 Dangerous? Call {agency.phone}
+            <Phone className="h-5 w-5" aria-hidden /> Dangerous? Call {agency.phone}
           </Button>
         )}
         {photo && (
           <Button variant="ghost" href={photo}>
-            <span>⬇ Save the photo to attach it</span>
+            <Download className="h-5 w-5" aria-hidden /> Save the photo to attach it
           </Button>
         )}
       </div>

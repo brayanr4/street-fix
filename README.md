@@ -29,7 +29,7 @@ Without an API key the app still works. You just type the description yourself, 
 - Next.js 16 (App Router) and Tailwind. Everything is in one page, designed for phones first.
 - `src/lib/agencies.ts` holds the Adelaide routing rules and the escalation ladder.
 - `src/lib/ai.ts` handles the photo description and letter writing (Claude, with template fallbacks).
-- `src/lib/geo.ts` turns GPS into an address and council using OpenStreetMap's Nominatim.
+- `src/lib/geo.ts` finds the council the moment the phone shares its location, by checking the point against the official ABS 2021 local government area boundaries (`/api/place`). The street address comes from OpenStreetMap's Nominatim. If the boundary service is down, it falls back to matching council names in the address, and the person can always change the council by hand.
 - Reports are saved in the browser (localStorage) of the phone that made them. Nobody else can see your photos or locations, and the server needs no database. The catch: clearing browser data or switching phones loses them. Accounts and a database come later.
 - `src/lib/rateLimit.ts` caps AI requests per visitor (30 per 10 minutes by default, set `STREET_FIX_RATE_LIMIT` to change) so a public site can't run up your API bill.
 

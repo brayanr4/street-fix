@@ -31,8 +31,41 @@ async function forceOverdue(page: Page) {
   await page.reload();
 }
 
+// Stands in for the address and council lookup so tests don't depend on outside services.
+async function mockPlace(page: Page, place: { address: string; councilId: string | null; outsideArea: string | null }) {
+  await page.route("**/api/place", (route) => route.fulfill({ json: place }));
+}
+
 test.describe("with location", () => {
   test.use({ geolocation: { latitude: -34.9285, longitude: 138.6007 }, permissions: ["geolocation"] });
+
+  test.beforeEach(async ({ page }) => {
+    await mockPlace(page, { address: "", councilId: "adelaide", outsideArea: null });
+  });
+
+  test("detects the council and address from the phone's location", async ({ page }) => {
+    await mockPlace(page, { address: "12 Unley Road, Unley, 5061", councilId: "unley", outsideArea: null });
+    await page.goto("/");
+    await page.getByRole("button", { name: /Report a problem/ }).click();
+    await page.locator("input[type=file]").setInputFiles(PHOTO);
+    await page.getByRole("button", { name: "Next" }).click();
+    await expect(page.getByLabel("Council area")).toHaveValue("unley");
+    await expect(page.getByText("Found from your location.")).toBeVisible();
+    await expect(page.getByPlaceholder("Street address")).toHaveValue("12 Unley Road, Unley, 5061");
+    await expect(page.getByText("City of Unley", { exact: true }).last()).toBeVisible();
+    // Choosing a different council by hand wins, and the "found" note goes away.
+    await page.getByLabel("Council area").selectOption("mitcham");
+    await expect(page.getByText("Found from your location.")).toHaveCount(0);
+  });
+
+  test("explains when the location is outside the councils it covers", async ({ page }) => {
+    await mockPlace(page, { address: "Main St, Hahndorf", councilId: null, outsideArea: "Mount Barker, South Australia" });
+    await page.goto("/");
+    await page.getByRole("button", { name: /Report a problem/ }).click();
+    await page.locator("input[type=file]").setInputFiles(PHOTO);
+    await page.getByRole("button", { name: "Next" }).click();
+    await expect(page.getByText(/This spot is in Mount Barker, South Australia/)).toBeVisible();
+  });
 
   test("report a pothole, follow it all the way to the ombudsman, then mark it fixed", async ({ page }) => {
     await page.goto("/");
@@ -84,16 +117,16 @@ test.describe("with location", () => {
       await page.getByRole("button", { name: /write the next follow-up/ }).click();
       await expect(page.getByRole("heading", { name: step })).toBeVisible();
       await expect(page.getByLabel("Message (you can edit it)")).toHaveValue(/CRM-42/);
-      await page.getByRole("button", { name: "✓ I've sent it" }).click();
+      await page.getByRole("button", { name: "I've sent it" }).click();
       await expect(page.getByText(/Next check-in/)).toBeVisible();
-      await page.getByRole("button", { name: "← All reports" }).click();
+      await page.getByRole("button", { name: "All reports" }).click();
     }
 
     await forceOverdue(page);
     await page.getByRole("button", { name: /Deep pothole/ }).click();
     await expect(page.getByText(/taken every step/)).toBeVisible();
     await page.getByRole("button", { name: "Yes, it's fixed" }).click();
-    await expect(page.getByText(/Fixed! Thanks/)).toBeVisible();
+    await expect(page.getByText(/Fixed. Thanks/)).toBeVisible();
     await noSeriousA11yIssues(page);
   });
 
@@ -139,7 +172,7 @@ test.describe("without location", () => {
     await expect(page.getByRole("link", { name: /Open City of West Torrens/ })).toHaveAttribute("href", /westtorrens/);
     await expect(page.getByRole("link", { name: /Save the photo/ })).toHaveCount(0);
     await page.getByRole("button", { name: /start tracking/ }).click();
-    await page.getByRole("button", { name: "← All reports" }).click();
+    await page.getByRole("button", { name: "All reports" }).click();
     await expect(page.getByText("Dumped mattress")).toBeVisible();
   });
 

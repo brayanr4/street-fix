@@ -39,7 +39,7 @@ export function applyAction(r: Report, action: ReportAction, referenceNumber = "
         history: [...r.history, { at: now, kind: "acknowledged", text: "The agency replied" }],
       };
     case "fixed":
-      return { ...r, status: "fixed", history: [...r.history, { at: now, kind: "fixed", text: "Marked as fixed 🎉" }] };
+      return { ...r, status: "fixed", history: [...r.history, { at: now, kind: "fixed", text: "Marked as fixed" }] };
     case "not-fixed":
       // Snooze the check by a week when it's being worked on but isn't finished.
       return { ...r, nextCheckAt: addDays(now, 7), history: [...r.history, { at: now, kind: "note", text: "Checked: not fixed yet" }] };

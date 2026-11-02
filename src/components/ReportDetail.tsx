@@ -3,7 +3,9 @@
 import { useState } from "react";
 import { ESCALATION_STEPS, getAgency } from "@/lib/agencies";
 import { applyAction, applyFollowUpSent, type ReportAction } from "@/lib/reports";
-import { ISSUE_ICONS, ISSUE_LABELS, type Letter, type Report } from "@/lib/types";
+import { ISSUE_LABELS, type Letter, type Report } from "@/lib/types";
+import { ArrowLeft, Check } from "lucide-react";
+import { IssueIcon } from "./icons";
 import { api, Button, Card, friendly, daysBetween, niceDate, SendLetter, Spinner } from "./ui";
 
 export function isDue(r: Report) {
@@ -11,7 +13,7 @@ export function isDue(r: Report) {
 }
 
 export function StatusPill({ r }: { r: Report }) {
-  if (r.status === "fixed") return <span className="whitespace-nowrap rounded-full bg-emerald-100 px-3 py-1 text-sm font-semibold text-emerald-800">Fixed</span>;
+  if (r.status === "fixed") return <span className="whitespace-nowrap rounded-full bg-green-100 px-3 py-1 text-sm font-semibold text-green-800">Fixed</span>;
   if (isDue(r)) return <span className="whitespace-nowrap rounded-full bg-amber-100 px-3 py-1 text-sm font-semibold text-amber-900">Check in</span>;
   if (r.status === "acknowledged") return <span className="whitespace-nowrap rounded-full bg-sky-100 px-3 py-1 text-sm font-semibold text-sky-800">Agency replied</span>;
   return <span className="whitespace-nowrap rounded-full bg-slate-100 px-3 py-1 text-sm font-semibold text-slate-700">Waiting</span>;
@@ -64,7 +66,7 @@ export function ReportDetail({ report, onChange, onBack }: { report: Report; onC
           : undefined;
     return (
       <div className="flex flex-col gap-5">
-        <p className="text-sm font-semibold uppercase tracking-wide text-emerald-700">
+        <p className="text-sm font-semibold uppercase tracking-wide text-slate-600">
           Step {followUp.level + 1} of {ESCALATION_STEPS.length}
         </p>
         <h1 className="text-2xl font-bold">{followUp.step}</h1>
@@ -77,7 +79,7 @@ export function ReportDetail({ report, onChange, onBack }: { report: Report; onC
           </p>
         </Card>
         <SendLetter letter={followUp.letter} onChange={(l) => setFollowUp({ ...followUp, letter: l })} agency={agency} photo={report.photo} recipient={recipient} />
-        <Button onClick={followUpSent}>✓ I&apos;ve sent it</Button>
+        <Button onClick={followUpSent}>I&apos;ve sent it</Button>
         <Button variant="ghost" onClick={() => setFollowUp(null)}>
           Not now
         </Button>
@@ -87,8 +89,8 @@ export function ReportDetail({ report, onChange, onBack }: { report: Report; onC
 
   return (
     <div className="flex flex-col gap-5">
-      <button onClick={onBack} className="self-start text-slate-600 hover:text-slate-900">
-        ← All reports
+      <button onClick={onBack} className="flex items-center gap-1 self-start text-slate-600 hover:text-slate-900">
+        <ArrowLeft className="h-4 w-4" aria-hidden /> All reports
       </button>
 
       {report.photo && (
@@ -99,7 +101,7 @@ export function ReportDetail({ report, onChange, onBack }: { report: Report; onC
       <div className="flex items-start justify-between gap-3">
         <div>
           <p className="text-sm text-slate-600">
-            {ISSUE_ICONS[report.issueType]} {ISSUE_LABELS[report.issueType]}
+            <IssueIcon type={report.issueType} className="mr-1 inline h-4 w-4 align-[-2px]" /> {ISSUE_LABELS[report.issueType]}
           </p>
           <h1 className="text-2xl font-bold">{report.title}</h1>
           <p className="text-slate-600">{report.address}</p>
@@ -115,7 +117,7 @@ export function ReportDetail({ report, onChange, onBack }: { report: Report; onC
 
       {report.status === "fixed" ? (
         <Card tone="good">
-          <p className="text-xl font-bold">🎉 Fixed! Thanks for making your street better.</p>
+          <p className="text-xl font-bold">Fixed. Thanks for making your street better.</p>
           <p className="mt-1 text-slate-700">It took {age} {age === 1 ? "day" : "days"} from your first report.</p>
         </Card>
       ) : isDue(report) ? (
@@ -178,12 +180,12 @@ export function ReportDetail({ report, onChange, onBack }: { report: Report; onC
             <li key={s.title} className="flex items-center gap-3">
               <span
                 className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sm font-bold ${
-                  i <= report.escalationLevel ? "bg-emerald-600 text-white" : "bg-slate-200 text-slate-500"
+                  i <= report.escalationLevel ? "bg-ink text-white" : "bg-slate-200 text-slate-600"
                 }`}
               >
-                {i <= report.escalationLevel ? "✓" : i + 1}
+                {i <= report.escalationLevel ? <Check className="h-4 w-4" aria-label="Done" /> : i + 1}
               </span>
-              <span className={i <= report.escalationLevel ? "font-semibold" : "text-slate-500"}>{s.title}</span>
+              <span className={i <= report.escalationLevel ? "font-semibold" : "text-slate-600"}>{s.title}</span>
             </li>
           ))}
         </ol>
@@ -194,11 +196,11 @@ export function ReportDetail({ report, onChange, onBack }: { report: Report; onC
         <ul className="flex flex-col gap-3">
           {[...report.history].reverse().map((h, i) => (
             <li key={i} className="rounded-xl bg-white p-4 shadow-sm">
-              <p className="text-sm text-slate-500">{niceDate(h.at)}</p>
+              <p className="text-sm text-slate-600">{niceDate(h.at)}</p>
               <p className="font-semibold">{h.text}</p>
               {h.letter && (
                 <>
-                  <button className="mt-1 text-sm text-emerald-700 underline" onClick={() => setOpenLetter(openLetter === i ? null : i)}>
+                  <button className="mt-1 text-sm font-medium text-ink underline" onClick={() => setOpenLetter(openLetter === i ? null : i)}>
                     {openLetter === i ? "Hide message" : "Show message"}
                   </button>
                   {openLetter === i && (

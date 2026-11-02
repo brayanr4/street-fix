@@ -24,18 +24,6 @@ export const ISSUE_LABELS: Record<IssueType, string> = {
   other: "Something else",
 };
 
-export const ISSUE_ICONS: Record<IssueType, string> = {
-  pothole: "🕳️",
-  streetlight: "💡",
-  footpath: "🚶",
-  graffiti: "🎨",
-  dumping: "🗑️",
-  tree: "🌳",
-  drainage: "🌊",
-  signage: "🚦",
-  other: "📍",
-};
-
 export type Severity = "low" | "medium" | "high";
 
 export type Analysis = {

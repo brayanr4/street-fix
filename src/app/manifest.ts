@@ -8,8 +8,8 @@ export default function manifest(): MetadataRoute.Manifest {
     description: "Snap a problem on your street. Street Fix reports it to the right agency and follows up until it's fixed.",
     start_url: "/",
     display: "standalone",
-    background_color: "#f8fafc",
-    theme_color: "#047857",
+    background_color: "#f4f2ed",
+    theme_color: "#18202b",
     icons: [
       { src: "/icon-192.png", sizes: "192x192", type: "image/png" },
       { src: "/icon-512.png", sizes: "512x512", type: "image/png" },

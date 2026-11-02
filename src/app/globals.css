@@ -1,11 +1,16 @@
 @import "tailwindcss";
 
 @theme inline {
-  --font-sans: var(--font-geist-sans);
+  --font-sans: var(--font-archivo);
+  --color-ink: #18202b;
+  --color-signal: #ffcc00;
+  --color-signal-dark: #f0b800;
+  --color-signal-soft: #fff6cc;
+  --color-paper: #f4f2ed;
 }
 
 body {
-  background: #f8fafc;
-  color: #0f172a;
-  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  background: var(--color-paper);
+  color: var(--color-ink);
+  font-family: var(--font-archivo), system-ui, sans-serif;
 }

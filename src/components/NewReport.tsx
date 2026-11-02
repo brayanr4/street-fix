@@ -2,8 +2,11 @@
 
 import { useEffect, useRef, useState } from "react";
 import { COUNCILS, routeIssue, type Agency } from "@/lib/agencies";
+import type { Place } from "@/lib/geo";
 import { createReport } from "@/lib/reports";
-import { ISSUE_ICONS, ISSUE_LABELS, ISSUE_TYPES, type Analysis, type IssueType, type Letter, type Report, type Severity } from "@/lib/types";
+import { ISSUE_LABELS, ISSUE_TYPES, type Analysis, type IssueType, type Letter, type Report, type Severity } from "@/lib/types";
+import { Camera, MapPin } from "lucide-react";
+import { IssueIcon } from "./icons";
 import { api, Button, friendly, Card, SendLetter, Spinner, Steps } from "./ui";
 
 type Draft = {
@@ -60,15 +63,36 @@ export function NewReport({ onDone, onCancel }: { onDone: (r: Report) => void; o
   const [aiOn, setAiOn] = useState(true);
   const [agency, setAgency] = useState<Agency | null>(null);
   const [letter, setLetter] = useState<Letter | null>(null);
+  const [place, setPlace] = useState<{ status: "looking" | "found" | "failed"; councilId: string | null; outsideArea: string | null } | null>(null);
+  const councilPicked = useRef(false);
   const fileInput = useRef<HTMLInputElement>(null);
 
   const set = (patch: Partial<Draft>) => setD((prev) => ({ ...prev, ...patch }));
 
   useEffect(() => {
+    // Looks up the address and council as soon as GPS answers, so they're ready
+    // (or arrive moments later) on the details screen.
+    async function findPlace(lat: number, lng: number) {
+      setPlace({ status: "looking", councilId: null, outsideArea: null });
+      try {
+        const res = await api<Place>("/api/place", { lat, lng });
+        setD((prev) => ({
+          ...prev,
+          address: prev.address || res.address,
+          councilId: councilPicked.current || !res.councilId ? prev.councilId : res.councilId,
+        }));
+        setPlace({ status: res.councilId ? "found" : "failed", councilId: res.councilId, outsideArea: res.outsideArea });
+      } catch {
+        setPlace({ status: "failed", councilId: null, outsideArea: null });
+      }
+    }
+
     navigator.geolocation?.getCurrentPosition(
       (pos) => {
-        set({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+        const { latitude: lat, longitude: lng } = pos.coords;
+        set({ lat, lng });
         setLocStatus("found");
+        findPlace(lat, lng);
       },
       () => setLocStatus("off"),
       { enableHighAccuracy: true, timeout: 15000 },
@@ -91,15 +115,10 @@ export function NewReport({ onDone, onCancel }: { onDone: (r: Report) => void; o
     setBusy("Looking at your photo and finding the address…");
     setError(null);
     try {
-      const res = await api<{ analysis: Analysis | null; address: string; councilId: string | null; aiEnabled: boolean }>(
-        "/api/analyze",
-        { image: d.photo, lat: d.lat, lng: d.lng, note: d.note },
-      );
+      const res = await api<{ analysis: Analysis | null; aiEnabled: boolean }>("/api/analyze", { image: d.photo, note: d.note });
       setAiOn(res.aiEnabled);
       const a = res.analysis;
       set({
-        address: res.address || d.address,
-        councilId: res.councilId ?? d.councilId,
         ...(a && {
           issueType: a.issueType,
           title: a.title,
@@ -174,20 +193,19 @@ export function NewReport({ onDone, onCancel }: { onDone: (r: Report) => void; o
           ) : (
             <button
               onClick={() => fileInput.current?.click()}
-              className="flex h-64 flex-col items-center justify-center gap-3 rounded-2xl border-4 border-dashed border-emerald-300 bg-emerald-50 text-emerald-800 hover:bg-emerald-100"
+              className="flex h-64 flex-col items-center justify-center gap-3 rounded-2xl border-2 border-dashed border-ink/30 bg-white text-ink hover:bg-signal-soft"
             >
-              <span className="text-6xl" aria-hidden>
-                📷
-              </span>
+              <Camera className="h-12 w-12" aria-hidden strokeWidth={1.75} />
               <span className="text-xl font-semibold">Tap to take a photo</span>
               <span className="text-sm">or choose one from your phone</span>
             </button>
           )}
 
-          <p className="text-sm text-slate-600" aria-live="polite">
-            {locStatus === "finding" && "📍 Finding your location…"}
-            {locStatus === "found" && "📍 Location found. We'll use it to find the right council."}
-            {locStatus === "off" && "📍 Location is off, so you'll type the address on the next screen."}
+          <p className="flex items-start gap-2 text-sm text-slate-600" aria-live="polite">
+            <MapPin className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
+            {locStatus === "finding" && "Finding your location…"}
+            {locStatus === "found" && "Location found. We'll use it to find your council."}
+            {locStatus === "off" && "Location is off, so you'll type the address on the next screen."}
           </p>
 
           <label className="flex flex-col gap-1">
@@ -225,12 +243,10 @@ export function NewReport({ onDone, onCancel }: { onDone: (r: Report) => void; o
                   onClick={() => set({ issueType: t })}
                   aria-pressed={d.issueType === t}
                   className={`flex min-h-16 items-center gap-2 rounded-xl border-2 p-3 text-left text-sm font-medium ${
-                    d.issueType === t ? "border-emerald-600 bg-emerald-50" : "border-slate-200 bg-white"
+                    d.issueType === t ? "border-ink bg-signal-soft" : "border-slate-200 bg-white"
                   }`}
                 >
-                  <span className="text-2xl" aria-hidden>
-                    {ISSUE_ICONS[t]}
-                  </span>
+                  <IssueIcon type={t} className="h-6 w-6 shrink-0" />
                   {ISSUE_LABELS[t]}
                 </button>
               ))}
@@ -269,7 +285,10 @@ export function NewReport({ onDone, onCancel }: { onDone: (r: Report) => void; o
             <select
               className="rounded-xl border-2 border-slate-200 bg-white p-3 text-base"
               value={d.councilId}
-              onChange={(e) => set({ councilId: e.target.value })}
+              onChange={(e) => {
+                councilPicked.current = true;
+                set({ councilId: e.target.value });
+              }}
             >
               {COUNCILS.map((c) => (
                 <option key={c.id} value={c.id}>
@@ -277,6 +296,19 @@ export function NewReport({ onDone, onCancel }: { onDone: (r: Report) => void; o
                 </option>
               ))}
             </select>
+            <span className="flex items-start gap-1.5 text-sm text-slate-600" aria-live="polite">
+              {place?.status === "found" && place.councilId === d.councilId && (
+                <>
+                  <MapPin className="mt-0.5 h-4 w-4 shrink-0" aria-hidden /> Found from your location.
+                </>
+              )}
+              {place?.status === "looking" && "Finding your council from your location…"}
+              {place?.status === "failed" &&
+                (place.outsideArea
+                  ? `This spot is in ${place.outsideArea}. Street Fix covers the metro Adelaide councils for now.`
+                  : "We couldn't work out the council from your location. Please pick it from the list.")}
+              {!place && locStatus === "off" && "Pick the council for where the problem is."}
+            </span>
           </label>
 
           {ROAD_ISSUES.includes(d.issueType) && (
@@ -289,7 +321,7 @@ export function NewReport({ onDone, onCancel }: { onDone: (r: Report) => void; o
                     key={String(v)}
                     onClick={() => set({ onMainRoad: v })}
                     aria-pressed={d.onMainRoad === v}
-                    className={`min-h-14 rounded-xl border-2 font-semibold ${d.onMainRoad === v ? "border-emerald-600 bg-emerald-50" : "border-slate-200 bg-white"}`}
+                    className={`min-h-14 rounded-xl border-2 font-semibold ${d.onMainRoad === v ? "border-ink bg-signal-soft" : "border-slate-200 bg-white"}`}
                   >
                     {v ? "Yes, main road" : "No, local street"}
                   </button>
@@ -306,7 +338,7 @@ export function NewReport({ onDone, onCancel }: { onDone: (r: Report) => void; o
           <Button onClick={draft} disabled={!canCheck}>
             Write my report
           </Button>
-          {!canCheck && <p className="-mt-3 text-center text-sm text-slate-500">Add a title, description and address to continue.</p>}
+          {!canCheck && <p className="-mt-3 text-center text-sm text-slate-600">Add a title, description and address to continue.</p>}
           <Button variant="ghost" onClick={() => setStep(0)}>
             Back
           </Button>
@@ -324,8 +356,8 @@ export function NewReport({ onDone, onCancel }: { onDone: (r: Report) => void; o
           </Card>
           <SendLetter letter={letter} onChange={setLetter} agency={agency} photo={d.photo} />
           <div className="mt-2 border-t-2 border-slate-100 pt-5">
-            <Button onClick={markSent}>✓ I&apos;ve sent it, start tracking</Button>
-            <p className="mt-2 text-center text-sm text-slate-500">We&apos;ll remind you to check in, and write the follow-up for you if nothing happens.</p>
+            <Button onClick={markSent}>I&apos;ve sent it, start tracking</Button>
+            <p className="mt-2 text-center text-sm text-slate-600">We&apos;ll remind you to check in, and write the follow-up for you if nothing happens.</p>
           </div>
           <Button variant="ghost" onClick={() => setStep(1)}>
             Back

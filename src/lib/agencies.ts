@@ -86,6 +86,33 @@ export function routeIssue(issueType: IssueType, councilId: string, onMainRoad: 
   return councilAgency(councilId);
 }
 
+// Council names as the Australian Bureau of Statistics boundary service spells them.
+const ABS_NAMES: Record<string, string> = {
+  Adelaide: "adelaide",
+  "Adelaide Hills": "adelaide-hills",
+  Burnside: "burnside",
+  "Campbelltown (SA)": "campbelltown",
+  "Charles Sturt": "charles-sturt",
+  Gawler: "gawler",
+  "Holdfast Bay": "holdfast-bay",
+  Marion: "marion",
+  Mitcham: "mitcham",
+  "Norwood Payneham and St Peters": "npsp",
+  Onkaparinga: "onkaparinga",
+  Playford: "playford",
+  "Port Adelaide Enfield": "pae",
+  Prospect: "prospect",
+  Salisbury: "salisbury",
+  "Tea Tree Gully": "tea-tree-gully",
+  Unley: "unley",
+  Walkerville: "walkerville",
+  "West Torrens": "west-torrens",
+};
+
+export function councilFromAbsName(name: string): string | null {
+  return ABS_NAMES[name] ?? null;
+}
+
 export function guessCouncil(addressParts: string[]): string | null {
   const haystack = addressParts.join(" | ").toLowerCase();
   for (const c of COUNCILS) {
